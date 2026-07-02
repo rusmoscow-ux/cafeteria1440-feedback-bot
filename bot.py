@@ -56,10 +56,8 @@ COMMENT_TYPES = [
     "💬 Просто комментарий",
 ]
 
-PHOTO_ENABLED_TYPES = {
-    "👍 Сегодня понравилось",
-    "🔧 Стоит поправить",
-}
+# Фото можно добавить к любому типу комментария.
+PHOTO_ENABLED_TYPES = set(COMMENT_TYPES)
 
 PHOTO_ACTIONS = [
     "📷 Добавить фото",
