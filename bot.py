@@ -201,15 +201,24 @@ def attach_photo_to_feedback(feedback_id: int, photo_file_id: str) -> None:
 
 
 def get_feedback_for_date(date_key: str) -> list[dict]:
+    """Return feedback received during the local calendar day.
+
+    Important: reports are based on created_at (the moment the bot received the
+    feedback), not on any user-visible date text. This prevents manual tests,
+    redeploys, or display-date quirks from hiding feedback from the 20:00 report.
+    """
+    tz = get_tz()
+    start = datetime.strptime(date_key, "%Y-%m-%d").replace(tzinfo=tz)
+    end = start + timedelta(days=1)
     with db_connect() as conn:
         rows = conn.execute(
             """
             SELECT id, created_at, report_date, location, comment_type, comment, photo_file_id, has_photo
             FROM feedback
-            WHERE report_date = ?
+            WHERE created_at >= ? AND created_at < ?
             ORDER BY id ASC
             """,
-            (date_key,),
+            (start.isoformat(timespec="seconds"), end.isoformat(timespec="seconds")),
         ).fetchall()
     return [dict(row) for row in rows]
 
@@ -470,7 +479,7 @@ async def daily_report_loop(application: Application) -> None:
                 MANAGER_CHAT_ID,
                 date_key=date_key,
                 mark_sent=True,
-                quiet_if_empty=True,
+                quiet_if_empty=False,
             )
         except Exception as exc:
             logging.exception("Failed to send scheduled daily report: %s", exc)
